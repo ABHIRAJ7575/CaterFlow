@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaterFlow — MVP</title>
+
+  <!-- =========================================================
+       THEME SYSTEM: Light (default) + Dark toggle
+       ========================================================= -->
+  <style>
+    /* Base tokens */
+    :root {
+      --radius: 12px;
+      --space: 10px;
+      --font: 15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+    }
+    /* Light theme (default) */
+    [data-theme="light"] {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --muted: #475569; /* slate-600 */
+      --text: #0f172a;  /* slate-900 */
+      --text-weak:#334155;
+      --line: #e5e7eb; /* gray-200 */
+      --card: #fafafa;
+      --acc: #ff7a18; /* cosmic orange */
+      --acc2:#7c3aed; /* purple for gradient */
+      --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+      --shadow: 0 6px 18px rgba(15, 23, 42, .08);
+    }
+    /* Dark theme */
+    [data-theme="dark"] {
+      --bg:#0b0f1a; --panel:#121827; --muted:#b6c3ff; --text:#f6f7ff; --text-weak:#c7d2fe;
+      --line:#1f2a46; --card:#151d3c; --acc:#ff7a18; --acc2:#7c3aed; --ok:#2dd4bf; --warn:#f59e0b; --bad:#ef4444; --shadow:0 10px 30px #0006;
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:var(--font)}
+    a{color:var(--acc);text-decoration:none}
+
+    .container{max-width:1100px;margin:16px auto;padding:0 12px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .brand h1{font-size:22px;margin:0}
+    .muted{color:var(--muted);font-size:13px}
+
+    .logo-wrap{display:flex;align-items:center;gap:10px}
+    .logo-img{width:40px;height:40px;border-radius:10px;object-fit:contain;background:transparent;box-shadow:var(--shadow)}
+    .tag{display:inline-block;margin-left:auto;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text-weak);font-size:12px}
+
+    .grid{display:grid;gap:12px}
+    .col-2{grid-template-columns:1fr 1fr}
+    @media (max-width: 960px){ .col-2{grid-template-columns:1fr} .brand h1{font-size:20px} }
+
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+    .panel h2{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font-size:16px;color:var(--text)}
+    .panel .body{padding:12px 14px}
+
+    label{display:block;margin:8px 0 6px;color:var(--text-weak);font-size:13px}
+    input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+    input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in oklab, var(--acc), transparent 75%);}
+
+    table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden}
+    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+    th{color:var(--text-weak);background:var(--card)}
+
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;transition:transform .1s}
+    .btn:active{transform:translateY(1px)}
+    .btn.acc{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:0}
+    .btn.ok{background:linear-gradient(135deg,#34d399,#2dd4bf);border:0;color:#012}
+    .btn.warn{background:linear-gradient(135deg,#f59e0b,#f97316);border:0;color:#210}
+    .btn.bad{background:linear-gradient(135deg,#ef4444,#f87171);border:0;color:#fff}
+
+    .switch{position:relative;width:48px;height:26px;background:var(--line);border-radius:999px;cursor:pointer}
+    .switch input{display:none}
+    .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s}
+    .switch input:checked + .knob{left:25px;background:var(--acc)}
+
+    .pill{display:inline-block;padding:4px 8px;background:var(--card);border:1px solid var(--line);border-radius:999px;color:var(--text-weak);font-size:12px}
+    .totals{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .card{background:var(--card);border:1px solid var(--line);padding:12px;border-radius:12px;text-align:center}
+    .card .big{font-size:20px;font-weight:800;margin-top:6px}
+
+    footer{opacity:.9;margin:24px 0;text-align:center;font-size:12px;color:var(--muted)}
+    .divider{height:1px;background:var(--line);margin:10px 0}
+  </style>
+
+  <!-- Client-side export libs (PDF & Word) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+</head>
+<body data-theme="light">
+  <div class="container">
+    <!-- =========================================================
+         HEADER + THEME & LOGO CONTROLS (mobile-first)
+         ========================================================= -->
+    <div class="brand">
+      <div class="logo-wrap">
+        <img id="logoImg" alt="CaterFlow Logo" class="logo-img"/>
+      </div>
+      <div style="flex:1">
+        <h1>CaterFlow — Daily Ops</h1>
+        <div class="muted">NSS · Alok Dixit · Made by Honey</div>
+        <div class="row" style="margin-top:8px">
+          <div class="row" title="Dark mode">
+            <span class="muted">Dark</span>
+            <label class="switch"><input id="themeToggle" type="checkbox"><span class="knob"></span></label>
+          </div>
+          <div class="row" title="Show/Hide logo">
+            <span class="muted">Logo</span>
+            <label class="switch"><input id="logoToggle" type="checkbox" checked><span class="knob"></span></label>
+          </div>
+          <div class="row" title="Use uploaded image instead of default text logo">
+            <span class="muted">Custom image</span>
+            <label class="switch"><input id="customLogoToggle" type="checkbox"><span class="knob"></span></label>
+            <input id="logoFile" type="file" accept="image/*" style="display:none"/>
+            <button class="btn" id="uploadLogo">Upload</button>
+            <button class="btn bad" id="removeLogo">Remove</button>
+          </div>
+        </div>
+      </div>
+      <span class="tag">CaterFlow</span>
+    </div>
+
+    <div class="grid col-2" style="margin-top:12px">
+      <!-- =======================================================
+           LEFT: DAILY LOG
+           ======================================================= -->
+      <div class="panel">
+        <h2>Daily Log <span class="pill">Auto‑purge on full storage</span></h2>
+        <div class="body">
+          <!-- Date + KeepDays -->
+          <div class="row">
+            <div style="flex:1;min-width:180px">
+              <label>Date</label>
+              <input type="date" id="date" />
+            </div>
+            <div class="row">
+              <label class="muted">Keep at least (days)</label>
+              <input type="number" id="keepDays" value="365" style="width:100px" />
+              <button class="btn" id="copyYesterday">Copy yesterday</button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Attendance -->
+          <h3 class="muted">Attendance</h3>
+          <div class="row">
+            <input id="employeeName" placeholder="Employee name" autocomplete="off" />
+            <button class="btn acc" id="addEmployee">Add</button>
+          </div>
+          <table id="attendanceTable">
+            <thead>
+              <tr><th>Name</th><th>Status</th><th>Hours</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <div class="divider"></div>
+
+          <!-- Packets -->
+          <h3 class="muted">Packets</h3>
+          <div class="row">
+            <div style="flex:1;min-width:120px">
+              <label>Packets made</label>
+              <input type="number" id="packetsMade" min="0" value="0" />
+            </div>
+            <div style="flex:1">
+              <label>Notes</label>
+              <input id="packetNotes" placeholder="e.g. morning batch" />
+            </div>
+          </div>
+
+          <!-- Distribution -->
+          <label style="margin-top:14px">Distribution by Location</label>
+          <div class="row">
+            <input id="locationName" placeholder="Location name" />
+            <input type="number" id="distributedCount" placeholder="Distributed" min="0" />
+            <input type="number" id="returnedCount" placeholder="Returned" min="0" />
+            <button class="btn acc" id="addDistribution">Add</button>
+          </div>
+          <table id="distributionTable">
+            <thead>
+              <tr><th>Location</th><th>Distributed</th><th>Returned</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <div class="divider"></div>
+
+          <!-- Finance -->
+          <h3 class="muted">Finance</h3>
+          <div class="row">
+            <select id="financeType">
+              <option value="expense">Expense</option>
+              <option value="revenue">Revenue</option>
+            </select>
+            <input id="financeCategory" placeholder="Category/Client" />
+            <input id="financeAmount" type="number" placeholder="Amount" />
+            <button class="btn acc" id="addFinance">Add</button>
+          </div>
+          <table id="financeTable">
+            <thead>
+              <tr><th>Type</th><th>Category/Client</th><th>Amount</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <div class="divider"></div>
+
+          <!-- Totals -->
+          <div class="totals">
+            <div class="card"><div class="pill">Made</div><div class="big" id="tMade">0</div></div>
+            <div class="card"><div class="pill">Distributed</div><div class="big" id="tDistributed">0</div></div>
+            <div class="card"><div class="pill">Leftover</div><div class="big" id="tLeftover">0</div></div>
+            <div class="card"><div class="pill">Profit</div><div class="big" id="tProfit">0</div></div>
+          </div>
+
+          <!-- Actions -->
+          <div class="row" style="margin-top:14px;gap:12px">
+            <button class="btn acc" id="saveDay">Save Day</button>
+            <button class="btn" id="exportJSON">Export JSON</button>
+            <button class="btn" id="importJSON">Import JSON</button>
+            <button class="btn ok" id="exportPDF">Download PDF</button>
+            <button class="btn warn" id="exportDOCX">Download Word</button>
+            <button class="btn bad" id="resetDay">Reset Day</button>
+            <button class="btn bad" id="wipeAll" title="Delete ALL data permanently">🗑️ Delete All</button>
+          </div>
+          <div class="muted" style="margin-top:6px">Downloads save as <b>CaterFlow_YYYY-MM-DD</b> on your device.</div>
+        </div>
+      </div>
+
+      <!-- =======================================================
+           RIGHT: INVENTORY
+           ======================================================= -->
+      <div class="panel">
+        <h2>Inventory <span class="pill">COGS via USAGE</span></h2>
+        <div class="body">
+          <!-- Items -->
+          <div class="row">
+            <input id="itemName" placeholder="Item (e.g., Rice)" />
+            <input id="itemUnit" placeholder="Unit (kg/L)" style="width:120px" />
+            <button class="btn acc" id="addItem">Add Item</button>
+          </div>
+          <table id="itemTable">
+            <thead>
+              <tr><th>Item</th><th>Unit</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <!-- Transactions -->
+          <label style="margin-top:14px">Transactions</label>
+          <div class="row">
+            <select id="txnType">
+              <option>INWARD</option>
+              <option>USAGE</option>
+              <option>ADJUSTMENT</option>
+            </select>
+            <select id="txnItem"></select>
+            <input id="txnQty" type="number" step="0.01" placeholder="Qty" style="width:120px" />
+            <input id="txnUnitCost" type="number" step="0.01" placeholder="Unit cost (optional)" />
+            <button class="btn acc" id="addTxn">Add Txn</button>
+          </div>
+          <table id="txnTable">
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Item</th><th>Qty</th><th>Unit Cost</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      CaterFlow — Mobile‑first, single‑file MVP. Upgrade path: Supabase/Next.js when needed.
+    </footer>
+  </div>
+
+  <!-- =========================================================
+       SCRIPT: App Logic (Theme, Logo, Local Storage, Exports)
+       ========================================================= -->
+  <script>
+    // ------------------------------
+    // Constants & Default Assets
+    // ------------------------------
+    const KEY = 'caterflow_v1';
+    const AUTO_PURGE = true;
+
+    // Default text logo (SVG) with purple→cosmic orange gradient, transparent BG
+    const DEFAULT_LOGO_DATA_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="180" height="60" viewBox="0 0 180 60">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6d28d9"/>
+            <stop offset="100%" stop-color="#ff7a18"/>
+          </linearGradient>
+        </defs>
+        <rect width="180" height="60" fill="none"/>
+        <text x="8" y="44" font-family="Segoe UI, Roboto, Arial" font-size="42" font-weight="800" fill="url(#g)">CFLOW</text>
+      </svg>`);
+
+    // ------------------------------
+    // State
+    // ------------------------------
+    const state = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (!state.days) state.days = {};
+    if (!state.inventory) state.inventory = { items: [], txns: [] };
+    if (!state.settings) state.settings = { theme:'light', logoEnabled:true, useCustomLogo:false, logoDataUrl:null };
+
+    // ------------------------------
+    // Helpers & Elements
+    // ------------------------------
+    const todayISO = () => new Date().toISOString().slice(0,10);
+    const qs = s=>document.querySelector(s);
+    const sortedDates = ()=> Object.keys(state.days).sort();
+    const saveInternal = ()=> localStorage.setItem(KEY, JSON.stringify(state));
+    function save(){
+      try{ saveInternal(); }
+      catch(err){ // purge oldest days if full
+        const minKeep = Math.max(0, Number(qs('#keepDays').value||0));
+        const dates = sortedDates(); const cut = Math.max(0, dates.length - minKeep); let removed=0;
+        for(let i=0;i<cut;i++){ delete state.days[dates[i]]; removed++; try{ saveInternal(); alert(`Storage full — auto‑purged ${removed} day(s).`); return; }catch(e){} }
+        for(let i=cut;i<dates.length;i++){ delete state.days[dates[i]]; removed++; try{ saveInternal(); alert(`Storage full — auto‑purged ${removed} day(s).`); return; }catch(e){} }
+        alert('Could not save: storage still full after purging.');
+      }
+    }
+
+    // Elements
+    const dateInput=qs('#date'); const keepDaysInput=qs('#keepDays');
+    const attendanceBody=qs('#attendanceTable tbody'); const distBody=qs('#distributionTable tbody'); const financeBody=qs('#financeTable tbody');
+    const itemBody=qs('#itemTable tbody'); const txnBody=qs('#txnTable tbody'); const txnItemSel=qs('#txnItem');
+    const themeToggle=qs('#themeToggle'); const logoToggle=qs('#logoToggle'); const customLogoToggle=qs('#customLogoToggle');
+    const uploadLogoBtn=qs('#uploadLogo'); const removeLogoBtn=qs('#removeLogo'); const logoFile=qs('#logoFile'); const logoImg=qs('#logoImg');
+
+    // Init theme & logo
+    document.body.setAttribute('data-theme', state.settings.theme || 'light');
+    themeToggle.checked = (state.settings.theme === 'dark');
+    logoToggle.checked = state.settings.logoEnabled !== false;
+    customLogoToggle.checked = !!state.settings.useCustomLogo;
+    function refreshLogo(){
+      const show = logoToggle.checked;
+      logoImg.style.display = show ? 'block':'none';
+      const src = state.settings.useCustomLogo && state.settings.logoDataUrl ? state.settings.logoDataUrl : DEFAULT_LOGO_DATA_URL;
+      logoImg.src = src; // small, transparent BG
+    }
+    refreshLogo();
+
+    // ------------------------------
+    // Day structures & renderers
+    // ------------------------------
+    function getDay(date){ if(!state.days[date]) state.days[date] = {attendance:[], packets:{made:0,notes:''}, distribution:[], finance:[]}; return state.days[date]; }
+    function sum(arr,fn){ return arr.reduce((a,b)=>a+(fn?fn(b):b),0); }
+
+    function renderAttendance(list){ attendanceBody.innerHTML=''; list.forEach((row,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`
+      <td>${row.name}</td>
+      <td><select data-i="${i}" class="att-status"><option ${row.status==='present'?'selected':''}>present</option><option ${row.status==='absent'?'selected':''}>absent</option></select></td>
+      <td><input data-i="${i}" class="att-hours" type="number" min="0" value="${row.hours||0}"></td>
+      <td><button class="btn bad" data-i="${i}" data-act="del-att">Delete</button></td>`; attendanceBody.appendChild(tr); }); }
+
+    function renderDistribution(list){ distBody.innerHTML=''; list.forEach((row,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`
+      <td>${row.location}</td>
+      <td><input data-i="${i}" class="dist-distributed" type="number" min="0" value="${row.distributed}"></td>
+      <td><input data-i="${i}" class="dist-returned" type="number" min="0" value="${row.returned||0}"></td>
+      <td><button class="btn bad" data-i="${i}" data-act="del-dist">Delete</button></td>`; distBody.appendChild(tr); }); }
+
+    function renderFinance(list){ financeBody.innerHTML=''; list.forEach((row,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`
+      <td><span class="pill">${row.type}</span></td>
+      <td>${row.category||''}</td>
+      <td>${Number(row.amount||0).toFixed(2)}</td>
+      <td><button class="btn bad" data-i="${i}" data-act="del-fin">Delete</button></td>`; financeBody.appendChild(tr); }); }
+
+    function renderItems(){ const {items}=state.inventory; itemBody.innerHTML=''; txnItemSel.innerHTML=''; items.forEach((it,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`
+      <td>${it.name}</td><td>${it.unit||''}</td><td><button class="btn bad" data-i="${i}" data-act="del-item">Delete</button></td>`; itemBody.appendChild(tr); const opt=document.createElement('option'); opt.value=it.name; opt.textContent=it.name; txnItemSel.appendChild(opt); }); }
+
+    function renderTxns(){ const {txns}=state.inventory; txnBody.innerHTML=''; txns.slice().reverse().forEach((t,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`
+      <td>${t.date}</td><td>${t.type}</td><td>${t.item}</td><td>${t.qty}</td><td>${t.unitCost??''}</td><td><button class="btn bad" data-i="${i}" data-act="del-txn">Delete</button></td>`; txnBody.appendChild(tr); }); }
+
+    function updateTotals(){ const d=getDay(dateInput.value); const made=Number(qs('#packetsMade').value||0); const distributed=sum(d.distribution,x=>Number(x.distributed||0)); const leftover=Math.max(made-distributed,0); const revenue=sum(d.finance.filter(x=>x.type==='revenue'),x=>Number(x.amount||0)); const expenses=sum(d.finance.filter(x=>x.type==='expense'),x=>Number(x.amount||0)); const dayCOGS=sum(state.inventory.txns.filter(t=>t.type==='USAGE'&&t.date===dateInput.value),t=>Number(t.qty||0)*Number(t.unitCost||0)); const profit=revenue-(expenses+dayCOGS); qs('#tMade').textContent=made; qs('#tDistributed').textContent=distributed; qs('#tLeftover').textContent=leftover; qs('#tProfit').textContent=profit.toFixed(2); }
+
+    function renderDay(){ const d=getDay(dateInput.value); qs('#packetsMade').value=d.packets.made||0; qs('#packetNotes').value=d.packets.notes||''; renderAttendance(d.attendance); renderDistribution(d.distribution); renderFinance(d.finance); updateTotals(); }
+
+    // ------------------------------
+    // Theme & Logo Events
+    // ------------------------------
+    themeToggle.onchange = ()=>{ state.settings.theme = themeToggle.checked ? 'dark' : 'light'; document.body.setAttribute('data-theme', state.settings.theme); save(); };
+    logoToggle.onchange  = ()=>{ state.settings.logoEnabled = logoToggle.checked; refreshLogo(); save(); };
+    customLogoToggle.onchange = ()=>{ state.settings.useCustomLogo = customLogoToggle.checked; refreshLogo(); save(); };
+    uploadLogoBtn.onclick = ()=> logoFile.click();
+    logoFile.onchange = ()=>{ const f=logoFile.files[0]; if(!f) return; const r=new FileReader(); r.onload = ()=>{ state.settings.logoDataUrl=r.result; state.settings.useCustomLogo=true; customLogoToggle.checked=true; refreshLogo(); save(); alert('Custom logo saved.'); }; r.readAsDataURL(f);} ;
+    removeLogoBtn.onclick = ()=>{ if(!confirm('Remove custom logo and use default text logo?')) return; state.settings.logoDataUrl=null; state.settings.useCustomLogo=false; customLogoToggle.checked=false; refreshLogo(); save(); };
+
+    // ------------------------------
+    // PDF & DOCX Exports (with optional logo)
+    // ------------------------------
+    async function generatePDF(date){ const {jsPDF}=window.jspdf; const doc=new jsPDF(); let y=10; if(state.settings.logoEnabled){ try{ const src=(state.settings.useCustomLogo&&state.settings.logoDataUrl)?state.settings.logoDataUrl:DEFAULT_LOGO_DATA_URL; doc.addImage(src, undefined, 14, y, 28, 28); }catch(e){} y+= state.settings.logoEnabled?32:14; } else { y+=14; } doc.setFontSize(16); doc.text('CaterFlow — Daily Report',14,y); y+=8; doc.setFontSize(11); doc.text(`Date: ${date}`,14,y); y+=8; const d=getDay(date); const made=d.packets.made; const dist=d.distribution.reduce((a,b)=>a+Number(b.distributed||0),0); const left=Math.max(made-dist,0); doc.text(`Packets made: ${made}`,14,y); y+=6; doc.text(`Distributed: ${dist} | Leftover: ${left}`,14,y); y+=8; doc.setFont(undefined,'bold'); doc.text('Distribution by Location',14,y); doc.setFont(undefined,'normal'); y+=6; d.distribution.forEach(row=>{ doc.text(`• ${row.location}: ${row.distributed} (ret ${row.returned||0})`,18,y); y+=6; }); y+=2; doc.setFont(undefined,'bold'); doc.text('Finance',14,y); doc.setFont(undefined,'normal'); y+=6; const revenue=d.finance.filter(x=>x.type==='revenue').reduce((a,b)=>a+Number(b.amount||0),0); const expenses=d.finance.filter(x=>x.type==='expense').reduce((a,b)=>a+Number(b.amount||0),0); const dayCOGS=state.inventory.txns.filter(t=>t.type==='USAGE'&&t.date===date).reduce((a,t)=>a+(Number(t.qty||0)*(Number(t.unitCost||0)||0)),0); const profit=revenue-(expenses+dayCOGS); doc.text(`Revenue: ₹${revenue.toFixed(2)} | Expenses: ₹${expenses.toFixed(2)} | COGS: ₹${dayCOGS.toFixed(2)} | Profit: ₹${profit.toFixed(2)}`,14,y); y+=8; doc.text('Attendance',14,y); y+=6; d.attendance.forEach(a=>{ doc.text(`• ${a.name}: ${a.status} (${a.hours||0}h)`,18,y); y+=6; }); doc.save(`CaterFlow_${date}.pdf`); }
+
+    async function generateDOCX(date){ const d=getDay(date); const {Document,Packer,Paragraph,HeadingLevel,Table,TableRow,TableCell,WidthType,ImageRun} = window.docx; function dataUrlToUint8(u){ if(!u) return null; const b=u.split(',')[1]; const bin=atob(b); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return bytes; } const children=[]; if(state.settings.logoEnabled){ const src=(state.settings.useCustomLogo&&state.settings.logoDataUrl)?state.settings.logoDataUrl:DEFAULT_LOGO_DATA_URL; const bytes=dataUrlToUint8(src); if(bytes){ children.push(new Paragraph({ children:[ new ImageRun({ data:bytes, transformation:{ width:120, height:40 } }) ], alignment:'center' })); } } children.push(new Paragraph({ text:'CaterFlow — Daily Report', heading:HeadingLevel.TITLE })); children.push(new Paragraph({ text:`Date: ${date}` })); const distRows=d.distribution.map(row=> new TableRow({ children:[ new TableCell({ children:[new Paragraph(row.location)] }), new TableCell({ children:[new Paragraph(String(row.distributed))] }), new TableCell({ children:[new Paragraph(String(row.returned||0))] }), ] })); const distTable=new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, rows:[ new TableRow({ children:[ new TableCell({ children:[new Paragraph('Location')] }), new TableCell({ children:[new Paragraph('Distributed')] }), new TableCell({ children:[new Paragraph('Returned')] }), ] }), ...distRows ]}); const financeAgg=d.finance.reduce((acc,x)=>{ acc[x.type]=(acc[x.type]||0)+Number(x.amount||0); return acc; },{}); const dayCOGS=state.inventory.txns.filter(t=>t.type==='USAGE'&&t.date===date).reduce((a,t)=>a+(Number(t.qty||0)*(Number(t.unitCost||0)||0)),0); const profit=(financeAgg.revenue||0)-((financeAgg.expense||0)+dayCOGS); children.push(new Paragraph({ text:`Packets made: ${d.packets.made}` })); children.push(new Paragraph({ text:`Revenue: ₹${(financeAgg.revenue||0).toFixed(2)}  Expenses: ₹${(financeAgg.expense||0).toFixed(2)}  COGS: ₹${dayCOGS.toFixed(2)}  Profit: ₹${profit.toFixed(2)}` })); children.push(new Paragraph({ text:'Distribution by Location', heading:HeadingLevel.HEADING_2 })); children.push(distTable); children.push(new Paragraph({ text:'Attendance', heading:HeadingLevel.HEADING_2 })); d.attendance.forEach(a=> children.push(new Paragraph(`• ${a.name}: ${a.status} (${a.hours||0}h)`))); const docx=new Document({ sections:[{ children }]}); const blob=await Packer.toBlob(docx); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`CaterFlow_${date}.docx`; a.click(); URL.revokeObjectURL(a.href); }
+
+    // ------------------------------
+    // Events — CRUD & Utilities
+    // ------------------------------
+    dateInput.value = todayISO();
+    function attachCRUD(){
+      // Attendance
+      qs('#addEmployee').onclick = ()=>{ const name=qs('#employeeName').value.trim(); if(!name) return; const d=getDay(dateInput.value); d.attendance.push({name, status:'present', hours:8}); qs('#employeeName').value=''; renderAttendance(d.attendance); save(); };
+      attendanceBody.addEventListener('change', (e)=>{ const i=e.target.dataset.i; if(i==null) return; const d=getDay(dateInput.value); if(e.target.classList.contains('att-status')) d.attendance[i].status=e.target.value; if(e.target.classList.contains('att-hours')) d.attendance[i].hours=Number(e.target.value||0); save(); });
+      attendanceBody.addEventListener('click', (e)=>{ if(e.target.dataset.act==='del-att'){ const i=e.target.dataset.i; const d=getDay(dateInput.value); d.attendance.splice(i,1); renderAttendance(d.attendance); save(); }});
+      // Packets & Distribution
+      qs('#packetsMade').oninput=()=>{ const d=getDay(dateInput.value); d.packets.made=Number(qs('#packetsMade').value||0); save(); updateTotals(); };
+      qs('#packetNotes').oninput=()=>{ const d=getDay(dateInput.value); d.packets.notes=qs('#packetNotes').value; save(); };
+      qs('#addDistribution').onclick=()=>{ const loc=qs('#locationName').value.trim(); const dist=Number(qs('#distributedCount').value||0); const ret=Number(qs('#returnedCount').value||0); if(!loc) return; const d=getDay(dateInput.value); const made=d.packets.made||0; const curr=sum(d.distribution,x=>Number(x.distributed||0)); if(curr+dist>made){ alert('Cannot distribute more than made.'); return; } d.distribution.push({location:loc, distributed:dist, returned:ret}); qs('#locationName').value=''; qs('#distributedCount').value=''; qs('#returnedCount').value=''; renderDistribution(d.distribution); save(); updateTotals(); };
+      distBody.addEventListener('input',(e)=>{ const i=e.target.dataset.i; if(i==null) return; const d=getDay(dateInput.value); const field=e.target.classList.contains('dist-distributed')?'distributed':'returned'; d.distribution[i][field]=Number(e.target.value||0); save(); updateTotals(); });
+      distBody.addEventListener('click',(e)=>{ if(e.target.dataset.act==='del-dist'){ const i=e.target.dataset.i; const d=getDay(dateInput.value); d.distribution.splice(i,1); renderDistribution(d.distribution); save(); updateTotals(); }});
+      // Finance
+      qs('#addFinance').onclick=()=>{ const type=qs('#financeType').value; const cat=qs('#financeCategory').value.trim(); const amt=Number(qs('#financeAmount').value||0); if(!amt) return; const d=getDay(dateInput.value); d.finance.push({type, category:cat, amount:amt}); qs('#financeCategory').value=''; qs('#financeAmount').value=''; renderFinance(d.finance); save(); updateTotals(); };
+      financeBody.addEventListener('click',(e)=>{ if(e.target.dataset.act==='del-fin'){ const i=e.target.dataset.i; const d=getDay(dateInput.value); d.finance.splice(i,1); renderFinance(d.finance); save(); updateTotals(); }});
+      // Inventory
+      qs('#addItem').onclick=()=>{ const name=qs('#itemName').value.trim(); const unit=qs('#itemUnit').value.trim(); if(!name) return; state.inventory.items.push({name, unit}); save(); qs('#itemName').value=''; qs('#itemUnit').value=''; renderItems(); };
+      itemBody.addEventListener('click',(e)=>{ if(e.target.dataset.act==='del-item'){ const i=e.target.dataset.i; state.inventory.items.splice(i,1); save(); renderItems(); }});
+      qs('#addTxn').onclick=()=>{ const type=qs('#txnType').value; const item=qs('#txnItem').value; const qty=Number(qs('#txnQty').value||0); const unitCost=qs('#txnUnitCost').value?Number(qs('#txnUnitCost').value):null; if(!item||!qty) return; state.inventory.txns.push({date:dateInput.value, type, item, qty, unitCost}); save(); renderTxns(); updateTotals(); qs('#txnQty').value=''; qs('#txnUnitCost').value=''; };
+      txnBody.addEventListener('click',(e)=>{ if(e.target.dataset.act==='del-txn'){ const idxFromTop=Number(e.target.dataset.i); const realIndex=state.inventory.txns.length-1-idxFromTop; state.inventory.txns.splice(realIndex,1); save(); renderTxns(); updateTotals(); }});
+      // Utilities
+      qs('#copyYesterday').onclick=()=>{ const dates=sortedDates(); const today=dateInput.value; const y=dates.filter(d=>d<today).slice(-1)[0]; if(!y){ alert('No previous day to copy.'); return; } const prev=JSON.parse(JSON.stringify(state.days[y])); prev.finance=[]; prev.distribution=[]; prev.packets.made=0; prev.packets.notes=''; state.days[today]=prev; save(); renderDay(); };
+      qs('#exportPDF').onclick = ()=> generatePDF(dateInput.value);
+      qs('#exportDOCX').onclick= ()=> generateDOCX(dateInput.value);
+      qs('#saveDay').onclick   = ()=>{ save(); alert('Saved ✔'); };
+      qs('#resetDay').onclick  = ()=>{ if(!confirm("Clear only today's data?")) return; state.days[dateInput.value]={attendance:[], packets:{made:0,notes:''}, distribution:[], finance:[]}; save(); renderDay(); };
+      qs('#exportJSON').onclick= ()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='CaterFlow_export.json'; a.click(); URL.revokeObjectURL(a.href); };
+      qs('#importJSON').onclick= ()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=()=>{ const f=inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); Object.assign(state,data); save(); renderItems(); renderTxns(); renderDay(); alert('Imported ✔'); }catch(e){ alert('Invalid file'); } }; r.readAsText(f); }; inp.click(); };
+      qs('#wipeAll').onclick   = ()=>{ if(!confirm('This will DELETE ALL CaterFlow data on this browser. Proceed?')) return; if(!confirm('Are you absolutely sure?')) return; try{ localStorage.removeItem(KEY);}catch(e){} state.days={}; state.inventory={items:[], txns:[]}; state.settings={ theme:'light', logoEnabled:true, useCustomLogo:false, logoDataUrl:null }; save(); renderItems(); renderTxns(); renderDay(); document.body.setAttribute('data-theme','light'); themeToggle.checked=false; logoToggle.checked=true; customLogoToggle.checked=false; refreshLogo(); alert('All data deleted. Fresh start ✔'); };
+    }
+
+    // Startup
+    dateInput.addEventListener('change', renderDay);
+    renderItems(); renderTxns(); renderDay(); attachCRUD();
+  </script>
+</body>
+</html>
